@@ -4,6 +4,7 @@ import "dotenv/config";
 
 import authRoutes from "./src/routes/auth.routes.js";
 import staffRoutes from "./src/routes/staff.routes.js";
+import productRoutes from "./src/routes/product.routes.js";
 
 const app = express();
 
@@ -50,6 +51,10 @@ app.use(
   staffRoutes
 );
 
+app.use(
+  "/api/products",
+  productRoutes
+);
 
 // ========================================
 // SERVER

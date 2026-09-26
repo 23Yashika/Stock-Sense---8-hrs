@@ -43,3 +43,18 @@ model PasswordResetOtp {
 
   @@index([userId])
 }
+
+model Product {
+  id             String   @id @default(uuid())
+
+  name           String
+  sku            String   @unique
+  category       String
+  unitOfMeasure  String
+  initialStock   Float    @default(0)
+
+  isActive       Boolean  @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
