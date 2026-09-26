@@ -82,9 +82,55 @@ async function main() {
     });
 
     console.log("✓ Initial products successfully seeded into PostgreSQL database!");
-  } else {
-    console.log(`Product table in database already contains ${productCount} records.`);
   }
+
+  // ========================================
+  // SEED INITIAL SUPPLIERS, WAREHOUSES & LOCATIONS
+  // ========================================
+
+  let warehouse = await prisma.warehouse.findFirst({ where: { code: "WH" } });
+
+  if (!warehouse) {
+    warehouse = await prisma.warehouse.create({
+      data: {
+        name: "Main Warehouse",
+        code: "WH",
+        address: "742 Evergreen Terrace, Sector 4",
+      },
+    });
+    console.log("✓ Main Warehouse seeded:", warehouse.code);
+  }
+
+  let location = await prisma.location.findFirst({
+    where: { warehouseId: warehouse.id, code: "Stock1" },
+  });
+
+  if (!location) {
+    location = await prisma.location.create({
+      data: {
+        name: "Main Store",
+        code: "Stock1",
+        warehouseId: warehouse.id,
+      },
+    });
+    console.log("✓ Location Stock1 seeded:", location.name);
+  }
+
+  let supplier = await prisma.supplier.findFirst({ where: { name: "Azure Interior" } });
+
+  if (!supplier) {
+    supplier = await prisma.supplier.create({
+      data: {
+        name: "Azure Interior",
+        email: "vendor@azureinterior.com",
+        phone: "+1 555-0192",
+        address: "Industrial Park, Block B",
+      },
+    });
+    console.log("✓ Supplier Azure Interior seeded:", supplier.name);
+  }
+
+  console.log("Seeding process completed!");
 }
 
 main()

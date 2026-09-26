@@ -1,10 +1,6 @@
 import prisma from "../config/prisma.js";
 
-
-// ========================================
 // CREATE PRODUCT
-// ========================================
-
 export const createProduct = async (req, res) => {
   try {
     const {
@@ -15,50 +11,27 @@ export const createProduct = async (req, res) => {
       initialStock,
     } = req.body;
 
-    // -----------------------------
-    // Required fields
-    // -----------------------------
-
-    if (
-      !name ||
-      !sku ||
-      !category ||
-      !unitOfMeasure
-    ) {
+    if (!name || !sku || !category || !unitOfMeasure) {
       return res.status(400).json({
         success: false,
-        message:
-          "Name, SKU, category and unit of measure are required",
+        message: "Name, SKU, category and unit of measure are required",
       });
     }
-
-    // -----------------------------
-    // Validate stock
-    // -----------------------------
 
     const stock = initialStock ?? 0;
 
-    if (
-      typeof stock !== "number" ||
-      stock < 0
-    ) {
+    if (typeof stock !== "number" || stock < 0) {
       return res.status(400).json({
         success: false,
-        message:
-          "Initial stock must be a non-negative number",
+        message: "Initial stock must be a non-negative number",
       });
     }
 
-    // -----------------------------
-    // Check duplicate SKU
-    // -----------------------------
-
-    const existingProduct =
-      await prisma.product.findUnique({
-        where: {
-          sku: sku.trim(),
-        },
-      });
+    const existingProduct = await prisma.product.findUnique({
+      where: {
+        sku: sku.trim(),
+      },
+    });
 
     if (existingProduct) {
       return res.status(409).json({
@@ -66,10 +39,6 @@ export const createProduct = async (req, res) => {
         message: "SKU already exists",
       });
     }
-
-    // -----------------------------
-    // Create product
-    // -----------------------------
 
     const product = await prisma.product.create({
       data: {
@@ -86,10 +55,8 @@ export const createProduct = async (req, res) => {
       message: "Product created successfully",
       product,
     });
-
   } catch (error) {
     console.error("Create Product Error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -97,16 +64,20 @@ export const createProduct = async (req, res) => {
   }
 };
 
-
-// ========================================
-// GET ALL PRODUCTS
-// ========================================
-
+// GET ALL PRODUCTS (Includes location & warehouse stock breakdown)
 export const getProducts = async (req, res) => {
   try {
     const products = await prisma.product.findMany({
       where: {
         isActive: true,
+      },
+      include: {
+        stocks: {
+          include: {
+            warehouse: true,
+            location: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -118,10 +89,8 @@ export const getProducts = async (req, res) => {
       count: products.length,
       products,
     });
-
   } catch (error) {
     console.error("Get Products Error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -129,11 +98,7 @@ export const getProducts = async (req, res) => {
   }
 };
 
-
-// ========================================
 // GET SINGLE PRODUCT
-// ========================================
-
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -141,6 +106,14 @@ export const getProductById = async (req, res) => {
     const product = await prisma.product.findUnique({
       where: {
         id,
+      },
+      include: {
+        stocks: {
+          include: {
+            warehouse: true,
+            location: true,
+          },
+        },
       },
     });
 
@@ -155,13 +128,8 @@ export const getProductById = async (req, res) => {
       success: true,
       product,
     });
-
   } catch (error) {
-    console.error(
-      "Get Product Error:",
-      error
-    );
-
+    console.error("Get Product Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -169,60 +137,30 @@ export const getProductById = async (req, res) => {
   }
 };
 
-
-// ========================================
 // UPDATE PRODUCT
-// ========================================
-
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const { name, sku, category, unitOfMeasure, initialStock } = req.body;
 
-    const {
-      name,
-      sku,
-      category,
-      unitOfMeasure,
-      initialStock,
-    } = req.body;
+    const existingProduct = await prisma.product.findUnique({
+      where: { id },
+    });
 
-    // -----------------------------
-    // Find product
-    // -----------------------------
-
-    const existingProduct =
-      await prisma.product.findUnique({
-        where: {
-          id,
-        },
-      });
-
-    if (
-      !existingProduct ||
-      !existingProduct.isActive
-    ) {
+    if (!existingProduct || !existingProduct.isActive) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
 
-    // -----------------------------
-    // Validate SKU if provided
-    // -----------------------------
-
     if (sku !== undefined) {
-      const trimmedSku = sku.trim();
-
-      const duplicateSku =
-        await prisma.product.findFirst({
-          where: {
-            sku: trimmedSku,
-            NOT: {
-              id,
-            },
-          },
-        });
+      const duplicateSku = await prisma.product.findFirst({
+        where: {
+          sku: sku.trim(),
+          NOT: { id },
+        },
+      });
 
       if (duplicateSku) {
         return res.status(409).json({
@@ -232,57 +170,15 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    // -----------------------------
-    // Validate stock
-    // -----------------------------
-
-    if (
-      initialStock !== undefined &&
-      (typeof initialStock !== "number" ||
-        initialStock < 0)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Initial stock must be a non-negative number",
-      });
-    }
-
-    // -----------------------------
-    // Build update data
-    // -----------------------------
-
     const updateData = {};
-
-    if (name !== undefined) {
-      updateData.name = name.trim();
-    }
-
-    if (sku !== undefined) {
-      updateData.sku = sku.trim();
-    }
-
-    if (category !== undefined) {
-      updateData.category = category.trim();
-    }
-
-    if (unitOfMeasure !== undefined) {
-      updateData.unitOfMeasure =
-        unitOfMeasure.trim();
-    }
-
-    if (initialStock !== undefined) {
-      updateData.initialStock = initialStock;
-    }
-
-    // -----------------------------
-    // Update
-    // -----------------------------
+    if (name !== undefined) updateData.name = name.trim();
+    if (sku !== undefined) updateData.sku = sku.trim();
+    if (category !== undefined) updateData.category = category.trim();
+    if (unitOfMeasure !== undefined) updateData.unitOfMeasure = unitOfMeasure.trim();
+    if (initialStock !== undefined) updateData.initialStock = initialStock;
 
     const product = await prisma.product.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: updateData,
     });
 
@@ -291,13 +187,8 @@ export const updateProduct = async (req, res) => {
       message: "Product updated successfully",
       product,
     });
-
   } catch (error) {
-    console.error(
-      "Update Product Error:",
-      error
-    );
-
+    console.error("Update Product Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -305,56 +196,33 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-
-// ========================================
 // DELETE PRODUCT
-// ========================================
-
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const existingProduct =
-      await prisma.product.findUnique({
-        where: {
-          id,
-        },
-      });
+    const existingProduct = await prisma.product.findUnique({
+      where: { id },
+    });
 
-    if (
-      !existingProduct ||
-      !existingProduct.isActive
-    ) {
+    if (!existingProduct || !existingProduct.isActive) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
 
-    // -----------------------------
-    // Soft delete
-    // -----------------------------
-
     await prisma.product.update({
-      where: {
-        id,
-      },
-      data: {
-        isActive: false,
-      },
+      where: { id },
+      data: { isActive: false },
     });
 
     return res.status(200).json({
       success: true,
       message: "Product deleted successfully",
     });
-
   } catch (error) {
-    console.error(
-      "Delete Product Error:",
-      error
-    );
-
+    console.error("Delete Product Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
