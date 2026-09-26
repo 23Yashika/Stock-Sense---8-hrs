@@ -224,14 +224,14 @@ export default function StockAdjustmentsPage() {
         )}
 
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black p-6 rounded-xl border border-slate-200 shadow-sm">
           <div>
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-50 rounded-lg">
                 <SlidersHorizontal className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Stock Adjustments</h1>
+                <h1 className="text-xl font-bold text-white">Stock Adjustments</h1>
                 <p className="text-sm text-slate-500">
                   Reconcile physical inventory counts with system recorded stock
                 </p>
@@ -259,7 +259,7 @@ export default function StockAdjustmentsPage() {
         </div>
 
         {/* Filter and View Controls Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-black p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -276,8 +276,8 @@ export default function StockAdjustmentsPage() {
               onClick={() => setViewMode("list")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 viewMode === "list"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-black text-white-900 shadow-sm"
+                  : "text-white hover:text-slate-900"
               }`}
             >
               <List className="w-4 h-4" />
@@ -287,8 +287,8 @@ export default function StockAdjustmentsPage() {
               onClick={() => setViewMode("kanban")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 viewMode === "kanban"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-black text-white-900 shadow-sm"
+                  : "text-black hover:text-slate-900"
               }`}
             >
               <Kanban className="w-4 h-4" />
@@ -299,12 +299,12 @@ export default function StockAdjustmentsPage() {
 
         {/* Content Section */}
         {isLoading ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+          <div className="bg-black rounded-xl border border-slate-200 p-12 text-center shadow-sm">
             <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-3" />
             <p className="text-slate-500 text-sm font-medium">Loading stock adjustments...</p>
           </div>
         ) : adjustments.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+          <div className="bg-black rounded-xl border border-slate-200 p-12 text-center shadow-sm">
             <SlidersHorizontal className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-800">No stock adjustments found</h3>
             <p className="text-slate-500 text-sm max-w-md mx-auto mt-1 mb-6">
