@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: "Operations",
       icon: Inbox,
       children: [
-        { name: "Receipts (Incoming)", href: "/operations/receipts", icon: Inbox },
+        { name: "Receipts", href: "/operations/receipts", icon: Inbox },
         { name: "Delivery Orders", href: "/operations/delivery-orders", icon: Truck },
         { name: "Stock Adjustments", href: "/operations/adjustments", icon: Sliders },
         { name: "Move History", href: "/operations/move-history", icon: History },

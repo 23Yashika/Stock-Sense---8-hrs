@@ -36,9 +36,14 @@ router.put(
   updateReceipt
 );
 
-// Cancel draft
+// Cancel draft (supports both DELETE /:id and POST /:id/cancel)
 router.delete(
   "/:id",
+  requireRole("INVENTORY_MANAGER", "WAREHOUSE_STAFF"),
+  deleteReceipt
+);
+router.post(
+  "/:id/cancel",
   requireRole("INVENTORY_MANAGER", "WAREHOUSE_STAFF"),
   deleteReceipt
 );

@@ -4,11 +4,35 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Package, Plus, Search, AlertCircle, X, LogIn } from "lucide-react";
-import { getProductsApi, createProductApi, ProductItem } from "@/lib/api";
+import {
+  Package,
+  Plus,
+  Search,
+  AlertCircle,
+  X,
+  LogIn,
+  MapPin,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  CheckCircle2,
+  Boxes,
+} from "lucide-react";
+import {
+  getProductsApi,
+  createProductApi,
+  getWarehousesApi,
+  ProductItem,
+  WarehouseItem,
+} from "@/lib/api";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("ALL");
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [authError, setAuthError] = useState("");
@@ -24,19 +48,27 @@ export default function ProductsPage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const fetchProducts = async () => {
+  const fetchInitialData = async () => {
     setIsLoading(true);
     setAuthError("");
     try {
-      const res = await getProductsApi();
-      if (res.success) {
-        const productList = res.products || res.data || [];
+      const [prodRes, whRes] = await Promise.all([
+        getProductsApi(),
+        getWarehousesApi(),
+      ]);
+
+      if (prodRes.success) {
+        const productList = prodRes.products || prodRes.data || [];
         setProducts(productList);
       } else {
-        setAuthError(res.message || "Unable to fetch products from backend database.");
+        setAuthError(prodRes.message || "Unable to fetch products from backend database.");
+      }
+
+      if (whRes.success) {
+        setWarehouses(whRes.warehouses || whRes.data || []);
       }
     } catch (err) {
-      console.error("Error fetching products:", err);
+      console.error("Error fetching data:", err);
       setAuthError("Failed to connect to backend server (http://localhost:5000)");
     } finally {
       setIsLoading(false);
@@ -44,7 +76,7 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchInitialData();
   }, []);
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -68,7 +100,7 @@ export default function ProductsPage() {
       }
 
       // Refresh list from database
-      await fetchProducts();
+      await fetchInitialData();
       setIsModalOpen(false);
       setName("");
       setSku("");
@@ -81,21 +113,29 @@ export default function ProductsPage() {
     }
   };
 
+  // Filter products by Search query
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const toggleExpandRow = (productId: string) => {
+    setExpandedProductId((prev) => (prev === productId ? null : productId));
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Package className="w-6 h-6 text-emerald-400" /> Products Catalog (Live Database)
+              <Package className="w-6 h-6 text-emerald-400" /> Products Catalog
             </h1>
-            <p className="text-xs text-slate-400">Live stock on hand, SKUs, and categories from PostgreSQL.</p>
+            <p className="text-xs text-slate-400">
+              Live inventory tracking across global stock & warehouse locations.
+            </p>
           </div>
 
           <button
@@ -122,18 +162,56 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Product Table */}
+        {/* Product Controls & Table */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <div className="relative w-72">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by SKU or Product Name..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
+          {/* Controls Bar: Search + Warehouse Filter Dropdown */}
+          <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {/* Search Bar */}
+              <div className="relative w-72">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by SKU or Product Name..."
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Warehouse Filter Dropdown */}
+              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
+                <Filter className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-slate-400 font-medium hidden sm:inline">View Scope:</span>
+                <select
+                  value={selectedWarehouseId}
+                  onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                  className="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer pr-2"
+                >
+                  <option value="ALL" className="bg-slate-900 text-slate-200">
+                    🌐 All Warehouses (Global Stock)
+                  </option>
+                  {warehouses.map((wh) => (
+                    <option key={wh.id} value={wh.id} className="bg-slate-900 text-slate-200">
+                      🏬 {wh.code} - {wh.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Active Mode Summary Indicator */}
+            <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
+              <Boxes className="w-3.5 h-3.5 text-teal-400" />
+              {selectedWarehouseId === "ALL" ? (
+                <span>Scope: <strong className="text-emerald-400">Global Aggregate</strong> across all locations</span>
+              ) : (
+                <span>
+                  Filter: <strong className="text-teal-400">
+                    {warehouses.find((w) => w.id === selectedWarehouseId)?.name || selectedWarehouseId}
+                  </strong>
+                </span>
+              )}
             </div>
           </div>
 
@@ -141,52 +219,195 @@ export default function ProductsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-medium">
-                  <th className="py-3 px-4">SKU / Code</th>
-                  <th className="py-3 px-4">Product Name</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">UOM</th>
-                  <th className="py-3 px-4">Stock On Hand</th>
-                  <th className="py-3 px-4 text-right">Created Date</th>
+                  <th className="py-3.5 px-4 w-10"></th>
+                  <th className="py-3.5 px-4">SKU / Code</th>
+                  <th className="py-3.5 px-4">Product Name</th>
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">
+                    {selectedWarehouseId === "ALL" ? "Total Stock (Global)" : "Warehouse On-Hand"}
+                  </th>
+                  <th className="py-3.5 px-4">Location Breakdown</th>
+                  <th className="py-3.5 px-4 text-right">Created Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-slate-500">
                       Loading products from PostgreSQL database...
                     </td>
                   </tr>
                 ) : filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-slate-500">
                       {authError ? (
-                        <span className="text-amber-400 font-medium">
-                          {authError}
-                        </span>
+                        <span className="text-amber-400 font-medium">{authError}</span>
                       ) : (
                         <span>No products found in the database. Click "Create Product" to add one!</span>
                       )}
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-mono font-semibold text-emerald-400">{p.sku}</td>
-                      <td className="py-3 px-4 font-medium text-slate-100">{p.name}</td>
-                      <td className="py-3 px-4 text-slate-400">
-                        <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[11px]">
-                          {p.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">{p.unitOfMeasure}</td>
-                      <td className="py-3 px-4 font-bold text-slate-100">
-                        {p.initialStock} ({p.unitOfMeasure})
-                      </td>
-                      <td className="py-3 px-4 text-right text-slate-500 font-mono">
-                        {new Date(p.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))
+                  filteredProducts.map((p) => {
+                    const isExpanded = expandedProductId === p.id;
+
+                    // Calculate stock entries per warehouse filter
+                    const allStocks = p.stocks || [];
+                    const filteredStocks =
+                      selectedWarehouseId === "ALL"
+                        ? allStocks
+                        : allStocks.filter((s) => s.warehouse?.id === selectedWarehouseId || s.warehouseId === selectedWarehouseId);
+
+                    const locationStockSum = filteredStocks.reduce(
+                      (acc, curr) => acc + curr.quantity,
+                      0
+                    );
+
+                    // If ALL, add initial stock as base stock; if specific warehouse, show validated location quantity
+                    const displayTotal =
+                      selectedWarehouseId === "ALL"
+                        ? p.initialStock + locationStockSum
+                        : locationStockSum;
+
+                    return (
+                      <React.Fragment key={p.id}>
+                        <tr
+                          onClick={() => toggleExpandRow(p.id)}
+                          className={`hover:bg-slate-800/40 transition-colors cursor-pointer ${
+                            isExpanded ? "bg-slate-800/50" : ""
+                          }`}
+                        >
+                          <td className="py-3.5 px-4 text-center text-slate-500">
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-semibold text-emerald-400">
+                            {p.sku}
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-slate-100">{p.name}</td>
+                          <td className="py-3.5 px-4 text-slate-400">
+                            <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[11px]">
+                              {p.category}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-100 text-sm">
+                              {displayTotal}{" "}
+                              <span className="text-xs font-normal text-slate-400">
+                                {p.unitOfMeasure}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {filteredStocks.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {filteredStocks.map((s, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-[10px] font-mono text-teal-400"
+                                  >
+                                    <MapPin className="w-3 h-3 text-teal-500" />
+                                    {s.warehouse?.code}/{s.location?.code}: <strong>+{s.quantity}</strong>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : selectedWarehouseId === "ALL" ? (
+                              <span className="text-[11px] text-slate-500 font-mono">
+                                Base Store: {p.initialStock} {p.unitOfMeasure}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 italic">
+                                No stock in this warehouse
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-slate-500 font-mono">
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+
+                        {/* Expanded Location Stock Detail Cards */}
+                        {isExpanded && (
+                          <tr className="bg-slate-950/80 border-b border-slate-800">
+                            <td colSpan={7} className="p-4 pl-12">
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Building2 className="w-3.5 h-3.5 text-emerald-400" /> Detailed Warehouse & Rack Location Breakdown
+                                  </h4>
+                                  <span className="text-[11px] text-slate-400 font-mono">
+                                    Product ID: {p.id}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                  {/* Base Initial Stock Card */}
+                                  {selectedWarehouseId === "ALL" && (
+                                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+                                      <div>
+                                        <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                                          <Boxes className="w-3.5 h-3.5 text-indigo-400" /> Main Store (Initial)
+                                        </div>
+                                        <div className="text-[10px] text-slate-500">Unallocated Base Stock</div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-sm font-bold text-slate-100 font-mono">
+                                          {p.initialStock} {p.unitOfMeasure}
+                                        </div>
+                                        <span className="text-[9px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded">
+                                          Baseline
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Location Stock Cards */}
+                                  {allStocks.length > 0 ? (
+                                    allStocks.map((stock, idx) => (
+                                      <div
+                                        key={idx}
+                                        className={`p-3 border rounded-xl flex items-center justify-between ${
+                                          selectedWarehouseId !== "ALL" &&
+                                          (stock.warehouse?.id === selectedWarehouseId || stock.warehouseId === selectedWarehouseId)
+                                            ? "bg-emerald-950/20 border-emerald-500/30"
+                                            : "bg-slate-900 border-slate-800"
+                                        }`}
+                                      >
+                                        <div className="space-y-0.5">
+                                          <div className="text-[11px] font-semibold text-slate-200 flex items-center gap-1">
+                                            <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                                            {stock.warehouse?.name} ({stock.warehouse?.code})
+                                          </div>
+                                          <div className="text-[10px] text-slate-400 font-mono">
+                                            Rack: <span className="text-slate-300">{stock.location?.name} ({stock.location?.code})</span>
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="text-sm font-bold text-teal-300 font-mono">
+                                            +{stock.quantity} {p.unitOfMeasure}
+                                          </div>
+                                          <span className="text-[9px] px-1.5 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded inline-flex items-center gap-0.5">
+                                            <CheckCircle2 className="w-2.5 h-2.5" /> Validated
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="p-3 bg-slate-900/50 border border-slate-800/50 rounded-xl text-slate-500 text-xs italic">
+                                      No extra location receipt entries recorded yet.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
