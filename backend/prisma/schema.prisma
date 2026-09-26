@@ -32,6 +32,12 @@ enum DeliveryStatus {
   CANCELLED
 }
 
+enum TransferStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(uuid())
   loginId      String   @unique
@@ -44,6 +50,7 @@ model User {
 
   passwordResetOtps PasswordResetOtp[]
 
+  createdTransfers  Transfer[]
   receiptsCreated   Receipt[]
   deliveriesCreated Delivery[]
 }
@@ -78,6 +85,7 @@ model Product {
 
   receiptItems  ReceiptItem[]
   deliveryItems DeliveryItem[]
+  transferItems TransferItem[]
   stocks        Stock[]
   stockLedger   StockLedger[]
 }
@@ -103,14 +111,20 @@ model Warehouse {
   address  String?
   isActive Boolean @default(true)
 
-  locations   Location[]
-  receipts    Receipt[]
-  deliveries  Delivery[]
-  stocks      Stock[]
+  locations Location[]
+
+  stocks Stock[]
+
   stockLedger StockLedger[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  sourceTransfers Transfer[] @relation("TransferSourceWarehouse")
+
+  destinationTransfers Transfer[] @relation("TransferDestinationWarehouse")
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  receipts   Receipt[]
+  deliveries Delivery[]
 }
 
 model Location {
@@ -121,10 +135,13 @@ model Location {
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
-  receipts    Receipt[]
-  deliveries  Delivery[]
-  stocks      Stock[]
-  stockLedger StockLedger[]
+  receipts        Receipt[]
+  deliveries      Delivery[]
+  stocks          Stock[]
+  stockLedger     StockLedger[]
+  sourceTransfers Transfer[]    @relation("TransferSourceLocation")
+
+  destinationTransfers Transfer[] @relation("TransferDestinationLocation")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -215,15 +232,15 @@ model StockLedger {
 
   receiptId  String?
   deliveryId String?
+  transferId String?
+  product    Product   @relation(fields: [productId], references: [id])
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id])
+  location   Location  @relation(fields: [locationId], references: [id])
 
-  product   Product   @relation(fields: [productId], references: [id])
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
-  location  Location  @relation(fields: [locationId], references: [id])
-
-  receipt  Receipt?  @relation(fields: [receiptId], references: [id])
-  delivery Delivery? @relation(fields: [deliveryId], references: [id])
-
-  createdAt DateTime @default(now())
+  receipt   Receipt?  @relation(fields: [receiptId], references: [id])
+  delivery  Delivery? @relation(fields: [deliveryId], references: [id])
+  transfer  Transfer? @relation(fields: [transferId], references: [id])
+  createdAt DateTime  @default(now())
 
   @@index([productId])
   @@index([locationId])
@@ -290,4 +307,59 @@ model DeliveryItem {
   createdAt DateTime @default(now())
 
   @@unique([deliveryId, productId])
+}
+
+model Transfer {
+  id        String @id @default(uuid())
+  sequence  Int    @default(autoincrement())
+  reference String @unique
+
+  sourceWarehouseId String
+  sourceLocationId  String
+
+  destinationWarehouseId String
+  destinationLocationId  String
+
+  status TransferStatus @default(DRAFT)
+
+  createdById String
+
+  sourceWarehouse Warehouse @relation("TransferSourceWarehouse", fields: [sourceWarehouseId], references: [id])
+
+  sourceLocation Location @relation("TransferSourceLocation", fields: [sourceLocationId], references: [id])
+
+  destinationWarehouse Warehouse @relation("TransferDestinationWarehouse", fields: [destinationWarehouseId], references: [id])
+
+  destinationLocation Location @relation("TransferDestinationLocation", fields: [destinationLocationId], references: [id])
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  items TransferItem[]
+
+  stockLedger StockLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceWarehouseId])
+  @@index([sourceLocationId])
+  @@index([destinationWarehouseId])
+  @@index([destinationLocationId])
+  @@index([status])
+}
+
+model TransferItem {
+  id String @id @default(uuid())
+
+  transferId String
+  productId  String
+  quantity   Float
+
+  transfer Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  product Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([transferId, productId])
 }
