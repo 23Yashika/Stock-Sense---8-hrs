@@ -13,6 +13,7 @@ import stockRoutes from "./src/routes/stock.routes.js";
 import customerRoutes from "./src/routes/customer.routes.js";
 import deliveryRoutes from "./src/routes/delivery.routes.js";
 import transferRoutes from "./src/routes/transfer.routes.js";
+import adjustmentRoutes from "./src/routes/adjustment.routes.js";
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -74,6 +75,10 @@ app.use("/api/deliveries", deliveryRoutes);
 app.use(
   "/api/transfers",
   transferRoutes
+);
+app.use(
+  "/api/adjustments",
+  adjustmentRoutes
 );
 
 // ========================================
