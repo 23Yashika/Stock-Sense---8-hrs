@@ -2,12 +2,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, UserPlus, User, UserCheck, Lock, Warehouse, CheckCircle2 } from "lucide-react";
+import { X, UserPlus, User, Mail, Lock, Warehouse, CheckCircle2, AlertCircle } from "lucide-react";
+import { createWarehouseStaffApi } from "@/lib/api";
 
 interface CreateWarehouseStaffModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (staffData: { loginId: string; userName: string }) => void;
+  onSuccess?: (staffData: { loginId: string; emailId: string }) => void;
 }
 
 export default function CreateWarehouseStaffModal({
@@ -16,42 +17,61 @@ export default function CreateWarehouseStaffModal({
   onSuccess,
 }: CreateWarehouseStaffModalProps) {
   const [loginId, setLoginId] = useState("");
-  const [userName, setUserName] = useState("");
+  const [emailId, setEmailId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setErrorMessage("Passwords do not match");
       return;
     }
 
-    console.log("Creating Warehouse Staff member:", {
-      loginId,
-      userName,
-      role: "Warehouse Staff",
-      password,
-    });
+    setIsLoading(true);
 
-    setIsSuccess(true);
+    try {
+      const data = await createWarehouseStaffApi({
+        loginId,
+        email: emailId,
+        password,
+        confirmPassword,
+      });
 
-    if (onSuccess) {
-      onSuccess({ loginId, userName });
+      if (!data.success) {
+        setErrorMessage(data.message || "Failed to create staff account");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsSuccess(true);
+
+      if (onSuccess) {
+        onSuccess({ loginId, emailId });
+      }
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        setLoginId("");
+        setEmailId("");
+        setPassword("");
+        setConfirmPassword("");
+        onClose();
+      }, 1800);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to connect to server");
+    } finally {
+      setIsLoading(false);
     }
-
-    setTimeout(() => {
-      setIsSuccess(false);
-      setLoginId("");
-      setUserName("");
-      setPassword("");
-      setConfirmPassword("");
-      onClose();
-    }, 1800);
   };
 
   return (
@@ -69,7 +89,7 @@ export default function CreateWarehouseStaffModal({
             <CheckCircle2 className="w-16 h-16 text-emerald-400 animate-bounce" />
             <h3 className="text-2xl font-bold text-white">Staff Member Created!</h3>
             <p className="text-xs text-slate-400">
-              Warehouse Staff account for <span className="text-slate-200 font-semibold">{userName}</span> ({loginId}) has been initialized.
+              Warehouse Staff account for <span className="text-slate-200 font-semibold">{emailId}</span> ({loginId}) has been initialized.
             </p>
           </div>
         ) : (
@@ -85,6 +105,13 @@ export default function CreateWarehouseStaffModal({
                 </p>
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             {/* Locked Role Banner */}
             <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400">
@@ -102,23 +129,23 @@ export default function CreateWarehouseStaffModal({
                   required
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
-                  placeholder="e.g. STF-201"
+                  placeholder="e.g. STF-201 (6-12 chars)"
                   className="w-full pl-11 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
-            {/* Field 2: User Name */}
+            {/* Field 2: Email ID */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">User Name</label>
+              <label className="text-xs font-semibold text-slate-300">Email ID</label>
               <div className="relative">
-                <UserCheck className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Mail className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
-                  type="text"
+                  type="email"
                   required
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Full Name of Warehouse Staff"
+                  value={emailId}
+                  onChange={(e) => setEmailId(e.target.value)}
+                  placeholder="staff@stocksense.io"
                   className="w-full pl-11 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -167,9 +194,10 @@ export default function CreateWarehouseStaffModal({
               </button>
               <button
                 type="submit"
-                className="w-2/3 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all"
+                disabled={isLoading}
+                className="w-2/3 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all"
               >
-                Create Staff Account
+                {isLoading ? "Creating..." : "Create Staff Account"}
               </button>
             </div>
           </form>

@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Mail, KeyRound, Lock, CheckCircle2, ArrowRight } from "lucide-react";
+import { X, Mail, KeyRound, Lock, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
+import { forgotPasswordApi, verifyOtpApi, resetPasswordApi } from "@/lib/api";
 
 interface OtpResetModalProps {
   isOpen: boolean;
@@ -16,6 +17,9 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   if (!isOpen) return null;
 
   const handleOtpChange = (index: number, value: string) => {
@@ -24,19 +28,87 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
     updated[index] = value;
     setOtp(updated);
 
-    // Auto-focus next input field
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }
   };
 
-  const handleResetComplete = () => {
-    setStep(4);
-    setTimeout(() => {
-      onClose();
-      setStep(1);
-    }, 2500);
+  // Step 1: Send OTP
+  const handleSendOtp = async () => {
+    setErrorMessage("");
+    setIsLoading(true);
+    try {
+      const data = await forgotPasswordApi(email);
+      if (!data.success) {
+        setErrorMessage(data.message || "Failed to send OTP");
+        setIsLoading(false);
+        return;
+      }
+      setStep(2);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to connect to server");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleVerifyOtp = async () => {
+    setErrorMessage("");
+    setIsLoading(true);
+    const otpCode = otp.join("");
+    try {
+      const data = await verifyOtpApi(email, otpCode);
+      if (!data.success) {
+        setErrorMessage(data.message || "Invalid OTP code");
+        setIsLoading(false);
+        return;
+      }
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to verify OTP");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 3: Reset Password
+  const handleResetPassword = async () => {
+    setErrorMessage("");
+    if (newPassword !== confirmPassword) {
+      setErrorMessage("Passwords do not match");
+      return;
+    }
+    setIsLoading(true);
+    const otpCode = otp.join("");
+    try {
+      const data = await resetPasswordApi({
+        email,
+        otp: otpCode,
+        newPassword,
+        confirmPassword,
+      });
+
+      if (!data.success) {
+        setErrorMessage(data.message || "Failed to reset password");
+        setIsLoading(false);
+        return;
+      }
+
+      setStep(4);
+      setTimeout(() => {
+        onClose();
+        setStep(1);
+      }, 2500);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to reset password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,6 +120,13 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
         >
           <X className="w-5 h-5" />
         </button>
+
+        {errorMessage && (
+          <div className="mb-4 flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Step 1: Request OTP */}
         {step === 1 && (
@@ -74,11 +153,11 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
             </div>
 
             <button
-              onClick={() => setStep(2)}
-              disabled={!email}
+              onClick={handleSendOtp}
+              disabled={!email || isLoading}
               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
             >
-              Send OTP Code <ArrowRight className="w-4 h-4" />
+              {isLoading ? "Sending Code..." : "Send OTP Code"} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -111,11 +190,11 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
             </div>
 
             <button
-              onClick={() => setStep(3)}
-              disabled={otp.some((d) => !d)}
+              onClick={handleVerifyOtp}
+              disabled={otp.some((d) => !d) || isLoading}
               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
             >
-              Verify Code <ArrowRight className="w-4 h-4" />
+              {isLoading ? "Verifying..." : "Verify Code"} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -156,11 +235,11 @@ export default function OtpResetModal({ isOpen, onClose }: OtpResetModalProps) {
             </div>
 
             <button
-              onClick={handleResetComplete}
-              disabled={!newPassword || newPassword !== confirmPassword}
+              onClick={handleResetPassword}
+              disabled={!newPassword || newPassword !== confirmPassword || isLoading}
               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all"
             >
-              Update Password
+              {isLoading ? "Updating..." : "Update Password"}
             </button>
           </div>
         )}
