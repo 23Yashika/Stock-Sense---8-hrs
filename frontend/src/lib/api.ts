@@ -550,3 +550,64 @@ export async function getStockLedgerApi(params?: { search?: string; moveType?: s
   });
   return res.json();
 }
+
+// ========================================
+// STOCK ADJUSTMENT APIs
+// ========================================
+
+export interface StockAdjustmentItem {
+  id: string;
+  reference: string;
+  productId: string;
+  warehouseId: string;
+  locationId: string;
+  systemQuantity: number;
+  countedQuantity: number;
+  quantityDelta: number;
+  reason?: string;
+  status: string;
+  createdById: string;
+  product?: ProductItem;
+  warehouse?: WarehouseItem;
+  location?: LocationItem;
+  createdBy?: { id: string; loginId: string; email?: string };
+  createdAt: string;
+}
+
+export async function getAdjustmentsApi(params?: {
+  search?: string;
+  warehouseId?: string;
+  locationId?: string;
+  productId?: string;
+}): Promise<{ success: boolean; adjustments?: StockAdjustmentItem[]; count?: number; message?: string }> {
+  const token = getAuthToken();
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.warehouseId) query.append("warehouseId", params.warehouseId);
+  if (params?.locationId) query.append("locationId", params.locationId);
+  if (params?.productId) query.append("productId", params.productId);
+
+  const res = await fetch(`${API_BASE_URL}/adjustments?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function createAdjustmentApi(payload: {
+  productId: string;
+  warehouseId: string;
+  locationId: string;
+  countedQuantity: number;
+  reason?: string;
+}): Promise<{ success: boolean; adjustment?: StockAdjustmentItem; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/adjustments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
