@@ -24,28 +24,37 @@ enum StockMoveType {
   ADJUSTMENT
 }
 
+enum DeliveryStatus {
+  READY
+  PICKED
+  PACKED
+  DELIVERED
+  CANCELLED
+}
+
 model User {
-  id              String   @id @default(uuid())
-  loginId         String   @unique
-  email           String   @unique
-  passwordHash    String
-  role            UserRole
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(uuid())
+  loginId      String   @unique
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   passwordResetOtps PasswordResetOtp[]
 
-  receiptsCreated Receipt[]
+  receiptsCreated   Receipt[]
+  deliveriesCreated Delivery[]
 }
 
 model PasswordResetOtp {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  otpHash   String
+  otpHash String
 
   expiresAt DateTime
   attempts  Int      @default(0)
@@ -57,94 +66,97 @@ model PasswordResetOtp {
 }
 
 model Product {
-  id             String   @id @default(uuid())
-  name           String
-  sku            String   @unique
-  category       String
-  unitOfMeasure  String
-  initialStock   Float    @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  sku           String   @unique
+  category      String
+  unitOfMeasure String
+  initialStock  Float    @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  receiptItems   ReceiptItem[]
-  stocks         Stock[]
-  stockLedger    StockLedger[]
+  receiptItems  ReceiptItem[]
+  deliveryItems DeliveryItem[]
+  stocks        Stock[]
+  stockLedger   StockLedger[]
 }
 
 model Supplier {
-  id          String    @id @default(uuid())
-  name        String
-  email       String?
-  phone       String?
-  address     String?
-  isActive    Boolean   @default(true)
+  id       String  @id @default(uuid())
+  name     String
+  email    String?
+  phone    String?
+  address  String?
+  isActive Boolean @default(true)
 
-  receipts    Receipt[]
+  receipts Receipt[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Warehouse {
-  id          String        @id @default(uuid())
-  name        String
-  code        String        @unique
-  address     String?
-  isActive    Boolean       @default(true)
+  id       String  @id @default(uuid())
+  name     String
+  code     String  @unique
+  address  String?
+  isActive Boolean @default(true)
 
   locations   Location[]
   receipts    Receipt[]
+  deliveries  Delivery[]
   stocks      Stock[]
   stockLedger StockLedger[]
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Location {
-  id          String        @id @default(uuid())
+  id          String @id @default(uuid())
   name        String
   code        String
   warehouseId String
 
-  warehouse   Warehouse     @relation(fields: [warehouseId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
   receipts    Receipt[]
+  deliveries  Delivery[]
   stocks      Stock[]
   stockLedger StockLedger[]
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([warehouseId, code])
 }
 
 model Receipt {
-  id            String         @id @default(uuid())
+  id String @id @default(uuid())
 
-  sequence      Int            @default(autoincrement())
-  reference     String         @unique
+  sequence  Int    @default(autoincrement())
+  reference String @unique
 
-  supplierId    String
-  warehouseId   String
-  locationId    String
+  supplierId  String
+  warehouseId String
+  locationId  String
 
   scheduleDate DateTime?
-  status        ReceiptStatus  @default(DRAFT)
+  status       ReceiptStatus @default(DRAFT)
 
-  createdById   String
+  createdById String
 
-  supplier      Supplier       @relation(fields: [supplierId], references: [id])
-  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
-  location      Location       @relation(fields: [locationId], references: [id])
-  createdBy     User           @relation(fields: [createdById], references: [id])
+  supplier  Supplier  @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
 
-  items         ReceiptItem[]
-  stockLedger   StockLedger[]
+  items       ReceiptItem[]
+  stockLedger StockLedger[]
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([supplierId])
   @@index([warehouseId])
@@ -153,46 +165,46 @@ model Receipt {
 }
 
 model ReceiptItem {
-  id          String      @id @default(uuid())
+  id String @id @default(uuid())
 
-  receiptId   String
-  productId   String
-  quantity    Float
+  receiptId String
+  productId String
+  quantity  Float
 
-  receipt     Receipt     @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-  product     Product     @relation(fields: [productId], references: [id])
+  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
 
-  createdAt   DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([receiptId, productId])
 }
 
 model Stock {
-  id          String      @id @default(uuid())
+  id String @id @default(uuid())
 
   productId   String
   warehouseId String
   locationId  String
 
-  quantity    Float       @default(0)
+  quantity Float @default(0)
 
-  product     Product     @relation(fields: [productId], references: [id])
-  warehouse   Warehouse   @relation(fields: [warehouseId], references: [id])
-  location    Location    @relation(fields: [locationId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([productId, locationId])
   @@index([warehouseId])
 }
 
 model StockLedger {
-  id            String         @id @default(uuid())
+  id String @id @default(uuid())
 
-  productId     String
-  warehouseId   String
-  locationId    String
+  productId   String
+  warehouseId String
+  locationId  String
 
   moveType      StockMoveType
   quantityDelta Float
@@ -201,17 +213,81 @@ model StockLedger {
   referenceType String
   referenceId   String
 
-  receiptId     String?
+  receiptId  String?
+  deliveryId String?
 
-  product       Product        @relation(fields: [productId], references: [id])
-  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
-  location      Location       @relation(fields: [locationId], references: [id])
-  receipt       Receipt?       @relation(fields: [receiptId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
 
-  createdAt     DateTime       @default(now())
+  receipt  Receipt?  @relation(fields: [receiptId], references: [id])
+  delivery Delivery? @relation(fields: [deliveryId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@index([productId])
   @@index([locationId])
   @@index([referenceId])
   @@index([moveType])
+}
+
+model Customer {
+  id       String  @id @default(uuid())
+  name     String
+  email    String?
+  phone    String?
+  address  String?
+  isActive Boolean @default(true)
+
+  deliveries Delivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Delivery {
+  id String @id @default(uuid())
+
+  sequence  Int    @default(autoincrement())
+  reference String @unique
+
+  customerId  String
+  warehouseId String
+  locationId  String
+
+  scheduleDate DateTime?
+  status       DeliveryStatus @default(READY)
+
+  createdById String
+
+  customer  Customer  @relation(fields: [customerId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  items       DeliveryItem[]
+  stockLedger StockLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([warehouseId])
+  @@index([locationId])
+  @@index([status])
+}
+
+model DeliveryItem {
+  id String @id @default(uuid())
+
+  deliveryId String
+  productId  String
+  quantity   Float
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([deliveryId, productId])
 }
