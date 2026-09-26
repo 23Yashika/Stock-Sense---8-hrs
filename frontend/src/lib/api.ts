@@ -511,3 +511,42 @@ export async function cancelDeliveryApi(id: string): Promise<{ success: boolean;
   });
   return res.json();
 }
+
+// ========================================
+// MOVE HISTORY (STOCK LEDGER) APIs
+// ========================================
+
+export interface StockLedgerItem {
+  id: string;
+  productId: string;
+  warehouseId: string;
+  locationId: string;
+  moveType: "RECEIPT" | "DELIVERY" | "TRANSFER" | "ADJUSTMENT";
+  quantityDelta: number;
+  stockAfter: number;
+  referenceType: string;
+  referenceId: string;
+  receiptId?: string;
+  deliveryId?: string;
+  transferId?: string;
+  adjustmentId?: string;
+  product?: ProductItem;
+  warehouse?: WarehouseItem;
+  location?: LocationItem;
+  receipt?: ReceiptItem;
+  delivery?: DeliveryOrder;
+  transfer?: any;
+  createdAt: string;
+}
+
+export async function getStockLedgerApi(params?: { search?: string; moveType?: string }): Promise<{ success: boolean; ledger?: StockLedgerItem[]; message?: string }> {
+  const token = getAuthToken();
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.moveType) query.append("moveType", params.moveType);
+
+  const res = await fetch(`${API_BASE_URL}/stock/ledger?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
