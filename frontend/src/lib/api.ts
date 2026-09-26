@@ -46,6 +46,14 @@ export interface SupplierItem {
   address?: string;
 }
 
+export interface CustomerItem {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}
+
 export interface WarehouseItem {
   id: string;
   name: string;
@@ -77,6 +85,27 @@ export interface ReceiptItem {
   supplier?: SupplierItem;
   warehouse?: WarehouseItem;
   location?: LocationItem;
+  items?: {
+    id: string;
+    productId: string;
+    quantity: number;
+    product?: ProductItem;
+  }[];
+  createdAt: string;
+}
+
+export interface DeliveryOrder {
+  id: string;
+  reference: string;
+  customerId: string;
+  warehouseId: string;
+  locationId: string;
+  scheduleDate?: string;
+  status: "DRAFT" | "WAITING" | "READY" | "PICKED" | "PACKED" | "DELIVERED" | "CANCELLED";
+  customer?: CustomerItem;
+  warehouse?: WarehouseItem;
+  location?: LocationItem;
+  createdBy?: AuthUser;
   items?: {
     id: string;
     productId: string;
@@ -369,6 +398,115 @@ export async function cancelReceiptApi(id: string): Promise<{ success: boolean; 
   const token = getAuthToken();
   const res = await fetch(`${API_BASE_URL}/receipts/${id}/cancel`, {
     method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+// ========================================
+// CUSTOMER APIs
+// ========================================
+
+export async function getCustomersApi(): Promise<{ success: boolean; customers?: CustomerItem[]; data?: CustomerItem[] }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/customers`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function createCustomerApi(payload: {
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}): Promise<{ success: boolean; customer?: CustomerItem; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/customers`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+// ========================================
+// DELIVERY OPERATIONS APIs
+// ========================================
+
+export async function getDeliveriesApi(params?: { search?: string; status?: string }): Promise<{ success: boolean; deliveries?: DeliveryOrder[]; message?: string }> {
+  const token = getAuthToken();
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.status) query.append("status", params.status);
+
+  const res = await fetch(`${API_BASE_URL}/deliveries?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function getDeliveryByIdApi(id: string): Promise<{ success: boolean; delivery?: DeliveryOrder; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function createDeliveryApi(payload: {
+  customerId: string;
+  warehouseId: string;
+  locationId: string;
+  scheduleDate?: string;
+  items: { productId: string; quantity: number }[];
+}): Promise<{ success: boolean; delivery?: DeliveryOrder; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+export async function pickDeliveryApi(id: string): Promise<{ success: boolean; delivery?: DeliveryOrder; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries/${id}/pick`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function packDeliveryApi(id: string): Promise<{ success: boolean; delivery?: DeliveryOrder; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries/${id}/pack`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function validateDeliveryApi(id: string): Promise<{ success: boolean; delivery?: DeliveryOrder; message?: string; productId?: string; availableStock?: number }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries/${id}/validate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function cancelDeliveryApi(id: string): Promise<{ success: boolean; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/deliveries/${id}`, {
+    method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();

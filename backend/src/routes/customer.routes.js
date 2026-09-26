@@ -17,7 +17,7 @@ router.use(authenticate);
 
 router.post(
   "/",
-  requireRole("INVENTORY_MANAGER"),
+  requireRole("INVENTORY_MANAGER", "WAREHOUSE_STAFF"),
   createCustomer
 );
 

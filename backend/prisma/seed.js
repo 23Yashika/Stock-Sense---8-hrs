@@ -130,6 +130,20 @@ async function main() {
     console.log("✓ Supplier Azure Interior seeded:", supplier.name);
   }
 
+  let customer = await prisma.customer.findFirst({ where: { name: "Decathlon Retail" } });
+
+  if (!customer) {
+    customer = await prisma.customer.create({
+      data: {
+        name: "Decathlon Retail",
+        email: "orders@decathlon.com",
+        phone: "+1 555-9876",
+        address: "102 Logistics Park, Warehouse 4",
+      },
+    });
+    console.log("✓ Customer Decathlon Retail seeded:", customer.name);
+  }
+
   console.log("Seeding process completed!");
 }
 
