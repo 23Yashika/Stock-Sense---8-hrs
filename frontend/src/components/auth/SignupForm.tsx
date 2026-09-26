@@ -3,27 +3,56 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { User, Lock, UserCheck, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
+import { signupUser, setAuthToken } from "@/lib/api";
 
 export default function SignupForm() {
+  const router = useRouter();
   const [loginId, setLoginId] = useState("");
-  const [userName, setUserName] = useState("");
+  const [emailId, setEmailId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
+
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setErrorMessage("Passwords do not match");
       return;
     }
-    // Public signup automatically registers as Inventory Manager
-    console.log("Signing up Inventory Manager:", {
-      loginId,
-      userName,
-      role: "Inventory Manager",
-      password,
-    });
+
+    setIsLoading(true);
+
+    try {
+      const data = await signupUser({
+        loginId,
+        email: emailId,
+        password,
+        confirmPassword,
+      });
+
+      if (!data.success) {
+        setErrorMessage(data.message || "Signup failed");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.token) {
+        setAuthToken(data.token);
+      }
+
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to connect to StockSense server (http://localhost:5000)");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,6 +62,13 @@ export default function SignupForm() {
         <ShieldCheck className="w-4 h-4 shrink-0" />
         <span>Registering as: <strong>Inventory Manager</strong></span>
       </div>
+
+      {errorMessage && (
+        <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* Field 1: Login ID */}
       <div className="space-y-2">
@@ -44,23 +80,23 @@ export default function SignupForm() {
             required
             value={loginId}
             onChange={(e) => setLoginId(e.target.value)}
-            placeholder="Enter Login ID (e.g. MGR-101)"
+            placeholder="Enter Login ID (6-12 chars)"
             className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
       </div>
 
-      {/* Field 2: User Name */}
+      {/* Field 2: Email ID */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300">User Name</label>
+        <label className="text-xs font-semibold text-slate-300">Email ID</label>
         <div className="relative">
-          <UserCheck className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Mail className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
-            type="text"
+            type="email"
             required
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Enter your Full Name"
+            value={emailId}
+            onChange={(e) => setEmailId(e.target.value)}
+            placeholder="manager@stocksense.io"
             className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -101,9 +137,10 @@ export default function SignupForm() {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-950/40 transition-all"
+        disabled={isLoading}
+        className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-950/40 transition-all"
       >
-        Signup as Inventory Manager
+        {isLoading ? "Signing up..." : "Signup as Inventory Manager"}
       </button>
 
       <p className="text-center text-xs text-slate-400">

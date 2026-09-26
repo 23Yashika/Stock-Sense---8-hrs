@@ -9,16 +9,16 @@ import CreateWarehouseStaffModal from "@/components/settings/CreateWarehouseStaf
 export default function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffList, setStaffList] = useState([
-    { loginId: "STF-101", userName: "John Doe", role: "Warehouse Staff", dateAdded: "2026-09-20" },
-    { loginId: "STF-102", userName: "Sarah Jenkins", role: "Warehouse Staff", dateAdded: "2026-09-24" },
+    { loginId: "STF-101", emailId: "john.doe@stocksense.io", role: "Warehouse Staff", dateAdded: "2026-09-20" },
+    { loginId: "STF-102", emailId: "sarah.jenkins@stocksense.io", role: "Warehouse Staff", dateAdded: "2026-09-24" },
   ]);
 
-  const handleStaffCreated = (newStaff: { loginId: string; userName: string }) => {
+  const handleStaffCreated = (newStaff: { loginId: string; emailId: string }) => {
     setStaffList((prev) => [
       ...prev,
       {
         loginId: newStaff.loginId,
-        userName: newStaff.userName,
+        emailId: newStaff.emailId,
         role: "Warehouse Staff",
         dateAdded: new Date().toISOString().split("T")[0],
       },
@@ -83,7 +83,7 @@ export default function SettingsPage() {
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 font-medium">
                   <th className="py-3 px-4">Login ID</th>
-                  <th className="py-3 px-4">User Name</th>
+                  <th className="py-3 px-4">Email ID</th>
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4">Date Added</th>
                   <th className="py-3 px-4 text-right">Status</th>
@@ -93,7 +93,7 @@ export default function SettingsPage() {
                 {staffList.map((staff, idx) => (
                   <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
                     <td className="py-3 px-4 font-mono font-semibold text-emerald-400">{staff.loginId}</td>
-                    <td className="py-3 px-4 font-medium text-slate-200">{staff.userName}</td>
+                    <td className="py-3 px-4 font-medium text-slate-200">{staff.emailId}</td>
                     <td className="py-3 px-4 text-slate-400">
                       <span className="px-2 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-md text-[11px]">
                         {staff.role}

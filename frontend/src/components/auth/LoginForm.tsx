@@ -3,23 +3,58 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { User, Lock, LogIn } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, Lock, LogIn, AlertCircle } from "lucide-react";
 import OtpResetModal from "./OtpResetModal";
+import { loginUser, setAuthToken } from "@/lib/api";
 
 export default function LoginForm() {
+  const router = useRouter();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Logging in with:", { loginId, password, rememberMe });
+    setErrorMessage("");
+    setIsLoading(true);
+
+    try {
+      const data = await loginUser({ loginId, password });
+
+      if (!data.success) {
+        setErrorMessage(data.message || "Invalid login credentials");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.token) {
+        setAuthToken(data.token);
+      }
+
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to connect to StockSense server (http://localhost:5000)");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {errorMessage && (
+          <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {/* Field 1: Login ID */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-300">Login ID</label>
@@ -30,7 +65,7 @@ export default function LoginForm() {
               required
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder="Enter your Login ID or Email"
+              placeholder="Enter your Login ID"
               className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
             />
           </div>
@@ -76,9 +111,10 @@ export default function LoginForm() {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-950/40 transition-all flex items-center justify-center gap-2"
+          disabled={isLoading}
+          className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-950/40 transition-all flex items-center justify-center gap-2"
         >
-          <LogIn className="w-4 h-4" /> Login
+          <LogIn className="w-4 h-4" /> {isLoading ? "Signing in..." : "Login"}
         </button>
 
         <p className="text-center text-xs text-slate-400">
