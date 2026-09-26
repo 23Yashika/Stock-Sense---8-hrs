@@ -24,6 +24,10 @@ enum StockMoveType {
   ADJUSTMENT
 }
 
+enum AdjustmentStatus {
+  COMPLETED
+}
+
 enum DeliveryStatus {
   READY
   PICKED
@@ -50,9 +54,10 @@ model User {
 
   passwordResetOtps PasswordResetOtp[]
 
-  createdTransfers  Transfer[]
-  receiptsCreated   Receipt[]
-  deliveriesCreated Delivery[]
+  createdTransfers   Transfer[]
+  receiptsCreated    Receipt[]
+  deliveriesCreated  Delivery[]
+  createdAdjustments StockAdjustment[]
 }
 
 model PasswordResetOtp {
@@ -88,6 +93,7 @@ model Product {
   transferItems TransferItem[]
   stocks        Stock[]
   stockLedger   StockLedger[]
+  adjustments   StockAdjustment[]
 }
 
 model Supplier {
@@ -119,12 +125,12 @@ model Warehouse {
 
   sourceTransfers Transfer[] @relation("TransferSourceWarehouse")
 
-  destinationTransfers Transfer[] @relation("TransferDestinationWarehouse")
-
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  receipts   Receipt[]
-  deliveries Delivery[]
+  destinationTransfers Transfer[]        @relation("TransferDestinationWarehouse")
+  adjustments          StockAdjustment[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  receipts             Receipt[]
+  deliveries           Delivery[]
 }
 
 model Location {
@@ -141,10 +147,10 @@ model Location {
   stockLedger     StockLedger[]
   sourceTransfers Transfer[]    @relation("TransferSourceLocation")
 
-  destinationTransfers Transfer[] @relation("TransferDestinationLocation")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  destinationTransfers Transfer[]        @relation("TransferDestinationLocation")
+  adjustments          StockAdjustment[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@unique([warehouseId, code])
 }
@@ -230,17 +236,21 @@ model StockLedger {
   referenceType String
   referenceId   String
 
-  receiptId  String?
-  deliveryId String?
-  transferId String?
-  product    Product   @relation(fields: [productId], references: [id])
-  warehouse  Warehouse @relation(fields: [warehouseId], references: [id])
-  location   Location  @relation(fields: [locationId], references: [id])
+  receiptId    String?
+  deliveryId   String?
+  transferId   String?
+  adjustmentId String?
 
-  receipt   Receipt?  @relation(fields: [receiptId], references: [id])
-  delivery  Delivery? @relation(fields: [deliveryId], references: [id])
-  transfer  Transfer? @relation(fields: [transferId], references: [id])
-  createdAt DateTime  @default(now())
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+
+  receipt    Receipt?         @relation(fields: [receiptId], references: [id])
+  delivery   Delivery?        @relation(fields: [deliveryId], references: [id])
+  transfer   Transfer?        @relation(fields: [transferId], references: [id])
+  adjustment StockAdjustment? @relation(fields: [adjustmentId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@index([productId])
   @@index([locationId])
@@ -362,4 +372,39 @@ model TransferItem {
   createdAt DateTime @default(now())
 
   @@unique([transferId, productId])
+}
+
+model StockAdjustment {
+  id String @id @default(uuid())
+
+  sequence  Int    @default(autoincrement())
+  reference String @unique
+
+  productId   String
+  warehouseId String
+  locationId  String
+
+  systemQuantity  Float
+  countedQuantity Float
+  quantityDelta   Float
+
+  reason String?
+
+  status AdjustmentStatus @default(COMPLETED)
+
+  createdById String
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  location  Location  @relation(fields: [locationId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  stockLedger StockLedger[]
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([locationId])
+  @@index([createdAt])
 }
