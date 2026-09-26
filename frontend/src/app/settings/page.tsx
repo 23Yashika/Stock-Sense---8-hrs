@@ -1,28 +1,38 @@
 // src/app/settings/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { UserPlus, Warehouse, ShieldCheck, Users, ArrowLeft, Settings as SettingsIcon } from "lucide-react";
 import CreateWarehouseStaffModal from "@/components/settings/CreateWarehouseStaffModal";
+import { getWarehouseStaffApi, AuthUser } from "@/lib/api";
 
 export default function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [staffList, setStaffList] = useState([
-    { loginId: "STF-101", emailId: "john.doe@stocksense.io", role: "Warehouse Staff", dateAdded: "2026-09-20" },
-    { loginId: "STF-102", emailId: "sarah.jenkins@stocksense.io", role: "Warehouse Staff", dateAdded: "2026-09-24" },
-  ]);
+  const [staffList, setStaffList] = useState<AuthUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleStaffCreated = (newStaff: { loginId: string; emailId: string }) => {
-    setStaffList((prev) => [
-      ...prev,
-      {
-        loginId: newStaff.loginId,
-        emailId: newStaff.emailId,
-        role: "Warehouse Staff",
-        dateAdded: new Date().toISOString().split("T")[0],
-      },
-    ]);
+  const fetchStaffMembers = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getWarehouseStaffApi();
+      if (res.success && res.data) {
+        setStaffList(res.data);
+      }
+    } catch (err) {
+      console.error("Error fetching staff list:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaffMembers();
+  }, []);
+
+  const handleStaffCreated = () => {
+    // Refresh list directly from PostgreSQL
+    fetchStaffMembers();
   };
 
   return (
@@ -32,7 +42,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              href="/login"
+              href="/dashboard"
               className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -70,7 +80,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Registered Staff Table */}
+        {/* Registered Staff Table (Loaded from PostgreSQL) */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -85,28 +95,44 @@ export default function SettingsPage() {
                   <th className="py-3 px-4">Login ID</th>
                   <th className="py-3 px-4">Email ID</th>
                   <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Date Added</th>
+                  <th className="py-3 px-4">Date Created</th>
                   <th className="py-3 px-4 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {staffList.map((staff, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-semibold text-emerald-400">{staff.loginId}</td>
-                    <td className="py-3 px-4 font-medium text-slate-200">{staff.emailId}</td>
-                    <td className="py-3 px-4 text-slate-400">
-                      <span className="px-2 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-md text-[11px]">
-                        {staff.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-500">{staff.dateAdded}</td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Active
-                      </span>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500">
+                      Loading staff records ...
                     </td>
                   </tr>
-                ))}
+                ) : staffList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500">
+                      No Warehouse Staff accounts found in PostgreSQL. Click "Create Warehouse Staff" to add one!
+                    </td>
+                  </tr>
+                ) : (
+                  staffList.map((staff) => (
+                    <tr key={staff.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-emerald-400">{staff.loginId}</td>
+                      <td className="py-3 px-4 font-medium text-slate-200">{staff.email}</td>
+                      <td className="py-3 px-4 text-slate-400">
+                        <span className="px-2 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-md text-[11px]">
+                          Warehouse Staff
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500">
+                        {staff.createdAt ? new Date(staff.createdAt).toLocaleDateString() : "N/A"}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Active
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

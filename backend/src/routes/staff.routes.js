@@ -2,6 +2,7 @@ import express from "express";
 
 import {
   createWarehouseStaff,
+  getWarehouseStaff,
 } from "../controllers/staff.controller.js";
 
 import {
@@ -16,12 +17,19 @@ const router = express.Router();
 
 
 // ========================================
-// CREATE WAREHOUSE STAFF
+// GET ALL WAREHOUSE STAFF
 // ========================================
-//
-// Only an authenticated Inventory Manager
-// can create Warehouse Staff.
-//
+
+router.get(
+  "/",
+  authenticate,
+  requireRole("INVENTORY_MANAGER"),
+  getWarehouseStaff
+);
+
+
+// ========================================
+// CREATE WAREHOUSE STAFF
 // ========================================
 
 router.post(

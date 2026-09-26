@@ -3,6 +3,43 @@ import prisma from "../config/prisma.js";
 
 
 // ========================================
+// GET ALL WAREHOUSE STAFF
+// ========================================
+
+export const getWarehouseStaff = async (req, res) => {
+  try {
+    const staffList = await prisma.user.findMany({
+      where: {
+        role: "WAREHOUSE_STAFF",
+      },
+      select: {
+        id: true,
+        loginId: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: staffList,
+    });
+  } catch (error) {
+    console.error("Get Warehouse Staff Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+// ========================================
 // CREATE WAREHOUSE STAFF
 // ========================================
 
@@ -147,22 +184,13 @@ export const createWarehouseStaff = async (req, res) => {
     // ========================================
     // CREATE STAFF
     // ========================================
-    //
-    // IMPORTANT:
-    // Role is NOT coming from frontend.
-    //
-    // Backend automatically assigns:
-    // WAREHOUSE_STAFF
-    // ========================================
 
     const staff = await prisma.user.create({
       data: {
         loginId: trimmedLoginId,
         email: normalizedEmail,
         passwordHash,
-
         role: "WAREHOUSE_STAFF",
-
         isActive: true,
       },
     });

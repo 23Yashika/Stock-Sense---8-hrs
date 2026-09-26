@@ -6,6 +6,8 @@ export interface AuthUser {
   loginId: string;
   email: string;
   role: "INVENTORY_MANAGER" | "WAREHOUSE_STAFF";
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -13,6 +15,17 @@ export interface AuthResponse {
   message: string;
   token?: string;
   user?: AuthUser;
+}
+
+export interface ProductItem {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  unitOfMeasure: string;
+  initialStock: number;
+  isActive: boolean;
+  createdAt: string;
 }
 
 // Store & Retrieve JWT token
@@ -97,6 +110,20 @@ export async function resetPasswordApi(payload: {
   return res.json();
 }
 
+// ========================================
+// WAREHOUSE STAFF API CALLS (PostgreSQL Database)
+// ========================================
+
+export async function getWarehouseStaffApi(): Promise<{ success: boolean; data?: AuthUser[]; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/staff`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+}
+
 export async function createWarehouseStaffApi(payload: {
   loginId: string;
   email: string;
@@ -105,6 +132,39 @@ export async function createWarehouseStaffApi(payload: {
 }): Promise<AuthResponse> {
   const token = getAuthToken();
   const res = await fetch(`${API_BASE_URL}/staff`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+// ========================================
+// PRODUCTS API CALLS (PostgreSQL Database)
+// ========================================
+
+export async function getProductsApi(): Promise<{ success: boolean; products?: ProductItem[]; data?: ProductItem[]; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/products`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+}
+
+export async function createProductApi(payload: {
+  name: string;
+  sku: string;
+  category: string;
+  unitOfMeasure: string;
+  initialStock?: number;
+}): Promise<{ success: boolean; product?: ProductItem; message?: string }> {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/products`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
