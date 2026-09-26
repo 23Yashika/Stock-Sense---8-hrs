@@ -12,6 +12,7 @@ import receiptRoutes from "./src/routes/receipt.routes.js";
 import stockRoutes from "./src/routes/stock.routes.js";
 import customerRoutes from "./src/routes/customer.routes.js";
 import deliveryRoutes from "./src/routes/delivery.routes.js";
+import transferRoutes from "./src/routes/transfer.routes.js";
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -70,7 +71,10 @@ app.use("/api/stock", stockRoutes);
 app.use("/api/customers", customerRoutes);
 
 app.use("/api/deliveries", deliveryRoutes);
-
+app.use(
+  "/api/transfers",
+  transferRoutes
+);
 
 // ========================================
 // SERVER
